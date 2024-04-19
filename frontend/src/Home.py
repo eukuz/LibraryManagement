@@ -1,7 +1,7 @@
 import streamlit as st
 
 
-def main():
+def auth_page():
     personal_id = st.text_input(label="Personal Id", placeholder="Input your ID here...", type="password", key="user_id", label_visibility="hidden")
     login_button = st.button("Login")
 
@@ -11,7 +11,7 @@ def main():
         else:
             # do the id check on the backend
             st.text("You are logged in")
+            st.switch_page("pages/1_My_books.py")
 
 
-if __name__ == "__main__":
-    main()
+auth_page()
