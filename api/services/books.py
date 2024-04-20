@@ -67,9 +67,13 @@ async def get_progress(
             .where(BookProgress.user_id == user_id)
         result = await session.execute(stmt)
         result = result.scalar_one_or_none()
-        if result is None:
-            result = BookProgress(book_id=_id, user_id=user_id, read_pages=0)
-        return result
+    if result is None:
+        result = BookProgress(book_id=_id, user_id=user_id, read_pages=0)
+        book = await get_book(_id, sessionmaker)
+        if book is None:
+            raise NotFoundError
+        result.book = book
+    return result
 
 
 async def set_progress(

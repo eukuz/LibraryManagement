@@ -32,7 +32,8 @@ async def __get_access_token(
     code: str,
     oauth_cfg: YandexConfig,
 ):
-    token = base64.b64encode(f'{oauth_cfg.client_id}:{oauth_cfg.client_secret.get_secret_value()}'.encode()).decode()
+    secret_value = f'{oauth_cfg.client_id}:{oauth_cfg.client_secret.get_secret_value()}'.encode()
+    token = base64.b64encode(secret_value).decode()
     token = f"Basic {token}"
     client = AsyncClient(headers={"Authorization": token})
     async with client:

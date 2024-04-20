@@ -35,6 +35,7 @@ async def search_books(
 
 
 class BookResponse(BaseModel):
+    id: int
     title: str
     author: str
     genre: str
@@ -69,6 +70,7 @@ async def get_book(
     if book is None:
         return JSONResponse({}, status_code=status.HTTP_404_NOT_FOUND)
     return BookResponse(
+        id=book.id,
         title=book.title,
         author=book.author.fullname,
         genre=book.genre_name,
