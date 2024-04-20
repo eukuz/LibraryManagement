@@ -10,6 +10,30 @@ import asyncio
 router = APIRouter()
 
 
+class SearchBookResponse(BaseModel):
+    class Book(BaseModel):
+        id: int
+        title: str
+        author: str
+
+    books: list[Book]
+
+
+@router.get("/")
+async def search_books(
+    title_like: str = "",
+    author_like: str = "",
+    sessionmaker=Depends(di.sessionmaker),
+) -> SearchBookResponse:
+    books_ = await books.search_books(title_like, author_like, sessionmaker)
+    resp = SearchBookResponse(books=[])
+    resp.books = [
+        SearchBookResponse.Book(id=book.id, title=book.title, author=book.author_id)
+        for book in books_
+    ]
+    return resp
+
+
 class BookResponse(BaseModel):
     title: str
     author: str

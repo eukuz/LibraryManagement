@@ -6,7 +6,7 @@ from pydantic import BaseModel
 import asyncio
 import csv
 
-from api.persistence.models import Book, Genre, Author
+from api.persistence.models import Genre, Author
 from api.services import books
 
 
@@ -56,6 +56,7 @@ async def fill_books(sessionmaker: async_sessionmaker[AsyncSession], rows: list[
 
 
 async def main():
+    await di.init_db("api/store/db.sqlite")
     sessionmaker = await di.sessionmaker()
     path = Path("books.csv")
     rows = csv.DictReader(path.read_text().splitlines())
