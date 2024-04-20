@@ -9,6 +9,20 @@ from api.exceptions import NotFoundError
 logger = logging.getLogger(__name__)
 
 
+async def search_books(
+    title_like: str,
+    author_like: str,
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> list[Book]:
+    async with sessionmaker() as session:
+        stmt = select(Book)
+        if title_like != "":
+            stmt = stmt.where(Book.title.contains(title_like))
+        if author_like != "":
+            stmt = stmt.where(Book.author_id.contains(author_like))
+        return list((await session.execute(stmt)).scalars())
+
+
 async def get_book(
     _id: int,
     sessionmaker: async_sessionmaker[AsyncSession],
