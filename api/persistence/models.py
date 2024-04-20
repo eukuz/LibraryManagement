@@ -65,3 +65,4 @@ class Collection(Base):
 
     user_id: Mapped[str] = mapped_column(ForeignKey("user.id"), primary_key=True)
     book_id: Mapped[int] = mapped_column(ForeignKey("book.id"), primary_key=True)
+    book: Mapped[Book] = relationship(init=False, lazy='selectin')
