@@ -22,7 +22,7 @@ async def lifespan(db_path: str):
 
 def create_app(db_path: str) -> FastAPI:
     app = FastAPI(lifespan=lambda _: lifespan(db_path))
-    app.include_router(main.router, prefix="/api")
+    app.include_router(main.router, prefix="")
     app.include_router(yndx_oauth.router, prefix="/api/yndx-oauth")
     app.include_router(books.router, prefix="/api/books")
     app.include_router(collections.router, prefix="/api/collection")
