@@ -104,6 +104,6 @@ async def yndx_redirect_after_auth(
     )
     session_id = await users.create_new_session_for(user_id, sessionmaker)
 
-    resp = RedirectResponse("/")
+    resp = RedirectResponse("http://localhost:8501/My_books")
     resp.set_cookie("SESSION_ID", session_id)
     return resp
