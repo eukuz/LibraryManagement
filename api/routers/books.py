@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, Security, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, NonNegativeInt
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from api import di
 from api.exceptions import NotFoundError
+from api.persistence.models import Book, Collection
 from api.services import books as books_service, collections
 import asyncio
 
@@ -60,6 +63,34 @@ async def search_books(
         books[book_id].read_pages = progress.read_pages
         books[book_id].in_collection = in_coll
     resp.books = list(books.values())
+    return resp
+
+
+@router.get("/suggest")
+async def suggest_books(
+    sessionmaker: async_sessionmaker[AsyncSession] = Depends(di.sessionmaker),
+    user_id=Depends(di.get_user_id),
+) -> SearchBookResponse:
+    resp = SearchBookResponse(books=[])
+    async with sessionmaker() as session:
+        user_collection_stmt = select(Collection.book_id) \
+            .where(Collection.user_id == user_id)
+        stmt = select(Book) \
+            .where(Book.id.not_in(user_collection_stmt)) \
+            .limit(10)
+        books_ = (await session.execute(stmt)).scalars()
+    resp.books = [
+        BookResponse(
+            id=book.id,
+            title=book.title,
+            author=book.author_id,
+            genre=book.genre_name,
+            read_pages=0,
+            total_pages=book.pages,
+            in_collection=False,
+        )
+        for book in books_
+    ]
     return resp
 
 
