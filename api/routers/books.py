@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Security, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, NonNegativeInt
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from api import di
 from api.exceptions import NotFoundError
@@ -33,10 +33,18 @@ class SearchBookResponse(BaseModel):
 async def search_books(
     title_like: str = "",
     author_like: str = "",
+    offset: int = 0,
+    limit: int = 20,
     sessionmaker=Depends(di.sessionmaker),
     user_id=Depends(di.get_user_id),
 ) -> SearchBookResponse:
-    books_ = await books_service.search_books(title_like, author_like, sessionmaker)
+    books_ = await books_service.search_books(
+        title_like,
+        author_like,
+        offset,
+        limit,
+        sessionmaker,
+    )
     resp = SearchBookResponse(books=[])
     books = {
         book.id: BookResponse(
@@ -52,8 +60,12 @@ async def search_books(
     }
     coros = {
         book.id: (
-            asyncio.create_task(books_service.get_progress(book.id, user_id, sessionmaker)),
-            asyncio.create_task(collections.get_in_collection(book.id, user_id, sessionmaker)),
+            asyncio.create_task(
+                books_service.get_progress(book.id, user_id, sessionmaker)
+            ),
+            asyncio.create_task(
+                collections.get_in_collection(book.id, user_id, sessionmaker)
+            ),
         )
         for book in books_
     }
@@ -68,16 +80,22 @@ async def search_books(
 
 @router.get("/suggest")
 async def suggest_books(
+    limit: int = 20,
     sessionmaker: async_sessionmaker[AsyncSession] = Depends(di.sessionmaker),
     user_id=Depends(di.get_user_id),
 ) -> SearchBookResponse:
     resp = SearchBookResponse(books=[])
     async with sessionmaker() as session:
-        user_collection_stmt = select(Collection.book_id) \
-            .where(Collection.user_id == user_id)
-        stmt = select(Book) \
-            .where(Book.id.not_in(user_collection_stmt)) \
+        user_collection_stmt = select(Collection.book_id).where(
+            Collection.user_id == user_id
+        )
+        stmt = (
+            select(Book)
+            .where(Book.id.not_in(user_collection_stmt))
+            .order_by(func.random())
             .limit(10)
+        )
+        stmt = stmt.limit(limit)
         books_ = (await session.execute(stmt)).scalars()
     resp.books = [
         BookResponse(
@@ -98,12 +116,12 @@ async def suggest_books(
     "/{book_id}",
     responses={
         200: {
-            'model': BookResponse,
+            "model": BookResponse,
         },
         404: {
-            'description': 'No such a book',
-        }
-    }
+            "description": "No such a book",
+        },
+    },
 )
 async def get_book(
     book_id: int,
@@ -124,7 +142,7 @@ async def get_book(
         genre=book.genre_name,
         read_pages=progress.read_pages,
         total_pages=book.pages,
-        in_collection=in_collection
+        in_collection=in_collection,
     )
 
 
@@ -154,6 +172,8 @@ async def set_progress(
 ):
     req_body = __root__
     try:
-        await books_service.set_progress(book_id, user_id, req_body.pages_read, sessionmaker)
+        await books_service.set_progress(
+            book_id, user_id, req_body.pages_read, sessionmaker
+        )
     except NotFoundError:
         return JSONResponse({}, status_code=status.HTTP_404_NOT_FOUND)

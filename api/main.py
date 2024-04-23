@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 import os
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from api.routers import main, yndx_oauth, books, collections
 from api import di
 import logging
@@ -22,6 +23,13 @@ async def lifespan(db_path: str):
 
 def create_app(db_path: str) -> FastAPI:
     app = FastAPI(lifespan=lambda _: lifespan(db_path))
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.include_router(main.router, prefix="")
     app.include_router(yndx_oauth.router, prefix="/api/yndx-oauth")
     app.include_router(books.router, prefix="/api/books")

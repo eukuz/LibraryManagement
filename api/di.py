@@ -69,11 +69,12 @@ async def __get_user_data(
     if creds is None:
         creds = cookie_creds
     if creds is None:
-        raise HTTPException(
-            status_code=302,
-            detail="Not authenticated",
-            headers={"Location": "/api/yndx-oauth/authenticate"},
-        )
+        raise HTTPException(status_code=401)
+        # raise HTTPException(
+        #     status_code=302,
+        #     detail="Not authenticated",
+        #     headers={"Location": "/api/yndx-oauth/authenticate"},
+        # )
     userdata = await users.get_user_data(creds.credentials, sessionmaker)
     if userdata is None:
         logger.warning("Cannot find user for session '%s'", creds.credentials)
