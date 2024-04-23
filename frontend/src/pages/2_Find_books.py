@@ -1,40 +1,48 @@
-import random
-
 import streamlit as st
 import requests
-from model.book import Book
+from model.book import parse_books_response, Book
+import extra_streamlit_components as stx
 
 books_list_key = "books_list"
 search_string_key = "search_string"
+token_key = "token"
+cookies_key = "cookies"
 
 
-@st.cache_data
-def books_storage():
-    # TODO: add a query to backend here
-    books = [
-        Book("A Tale of Two Cities", "Charles Dickens", "Historical fiction", 40, True),
-        Book("The Little Prince", "Antoine de Saint-Exupéry", "Fantasy, Children's fiction", 0, False),
-        Book("The Alchemist", "Paulo Coelho", "Fantasy", 100, True),
-        Book("Harry Potter and the Philosopher's Stone", "J. K. Rowling", "Fantasy, Children's fiction", 15, True),
-    ]
+def update_cookies():
+    stx.CookieManager(cookies_key)
+
+
+def get_cookies():
+    return st.session_state[cookies_key]
+
+
+def get_random_books() -> list[Book]:
+    token = st.session_state[token_key]
+    response_books = requests.get(
+        "https://sqr.webrtc-thesis.ru/api/books/suggest",
+        headers={'Authorization': f'Bearer {token}'}
+    )
+
+    books = parse_books_response(response_books)
+
     return books
 
 
-def get_random_book():
-    books = books_storage()
-    index = random.Random().randint(0, len(books) - 1)
-    return books[index]
-
-
-@st.cache_data
 def find_books(search_string: str):
-    books = books_storage()
-
+    token = st.session_state[token_key]
+    headers = {'Authorization': f'Bearer {token}'}
+    request_url = "https://sqr.webrtc-thesis.ru/api/books/"
     if not search_string:
-        return []
+        response = requests.get(request_url,
+                                headers=headers)
+    else:
+        response = requests.get(request_url,
+                                headers=headers,
+                                params={"title_like": search_string})
+    books = parse_books_response(response)
 
-    # TODO: add a query to backend here
-    return [book for book in books if book.name.startswith(search_string)]
+    return books
 
 
 def top_bar():
@@ -60,18 +68,45 @@ def top_bar():
                 current_search_string = ""
 
             if current_search_string != st.session_state[search_string_key]:
-                st.session_state[search_string_key] = current_search_string
+                print(current_search_string)
+                print(st.session_state[search_string_key])
                 st.session_state[books_list_key] = find_books(current_search_string)
 
         with cols[2]:
             suggest_button = st.button("Suggest")
             if suggest_button:
-                st.session_state[books_list_key] = [get_random_book()]
+                st.session_state[books_list_key] = get_random_books()
+
+
+def update_in_collection():
+    books = st.session_state[books_list_key]
+    for book in books:
+        in_collection = st.session_state[f"in_collection_{book.id}"]
+        if book.in_my_collection != in_collection:
+            book.in_my_collection = in_collection
+            token = st.session_state[token_key]
+            requests.post(
+                f"https://sqr.webrtc-thesis.ru/api/books/{book.id}/collection",
+                headers={'Authorization': f'Bearer {token}'},
+                params={"add": in_collection}
+            )
 
 
 def find_books_page():
+    if token_key not in st.session_state:
+        update_cookies()
+        cookies = get_cookies()
+        if "SESSION_ID" in cookies:
+            session_id = cookies["SESSION_ID"]
+        else:
+            st.switch_page("Home.py")
+        if session_id:
+            st.session_state[token_key] = session_id
+        else:
+            st.switch_page("Home.py")
+
     if books_list_key not in st.session_state:
-        st.session_state[books_list_key] = []
+        st.session_state[books_list_key] = find_books("")
 
     st.title("Find books")
 
@@ -91,7 +126,11 @@ def find_books_page():
                 st.write(book.genre)
 
             with cols[2]:
-                st.checkbox(label="In my books", value=book.in_my_collection, key=book.name + str(books.index(book)))
+                st.checkbox(label="In my books",
+                            value=book.in_my_collection,
+                            key=f'in_collection_{book.id}',
+                            on_change=update_in_collection
+                            )
 
             st.progress(book.progress)
 

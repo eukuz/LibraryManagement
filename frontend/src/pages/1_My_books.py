@@ -1,28 +1,29 @@
+import requests
 import streamlit as st
+import extra_streamlit_components as stx
 
-from model.book import Book
+from model.book import parse_books_response, Book
 
 books_list_key = "books_list"
 search_string_key = "search_string"
+token_key = "token"
+cookies_key = "cookies"
 
 
-@st.cache_data
+def update_cookies():
+    stx.CookieManager(cookies_key)
+
+
+def get_cookies():
+    return st.session_state[cookies_key]
+
+
 def get_books():
-    # TODO: add a query to backend here
-    books = [
-        Book("A Tale of Two Cities", "Charles Dickens", "Historical fiction", 40, True),
-        Book("The Little Prince", "Antoine de Saint-Exupéry", "Fantasy, Children's fiction", 0, True),
-        Book("The Alchemist", "Paulo Coelho", "Fantasy", 100, True),
-        Book("Harry Potter and the Philosopher's Stone", "J. K. Rowling", "Fantasy, Children's fiction", 15, True),
-        Book("A Tale of Two Cities", "Charles Dickens", "Historical fiction", 40, True),
-        Book("The Little Prince", "Antoine de Saint-Exupéry", "Fantasy, Children's fiction", 0, True),
-        Book("The Alchemist", "Paulo Coelho", "Fantasy", 100, True),
-        Book("Harry Potter and the Philosopher's Stone", "J. K. Rowling", "Fantasy, Children's fiction", 15, True),
-        Book("A Tale of Two Cities", "Charles Dickens", "Historical fiction", 40, True),
-        Book("The Little Prince", "Antoine de Saint-Exupéry", "Fantasy, Children's fiction", 0, True),
-        Book("The Alchemist", "Paulo Coelho", "Fantasy", 100, True),
-        Book("Harry Potter and the Philosopher's Stone", "J. K. Rowling", "Fantasy, Children's fiction", 15, True),
-    ]
+    token = st.session_state[token_key]
+    response = requests.get("https://sqr.webrtc-thesis.ru/api/collection/",
+                            headers={'Authorization': f'Bearer {token}'})
+    books = parse_books_response(response)
+
     return books
 
 
@@ -33,7 +34,6 @@ def get_filtered_books(search_string: str):
     if not search_string:
         return books
 
-    # TODO: add a query to backend here
     return [book for book in books if book.name.startswith(search_string)]
 
 
@@ -71,7 +71,33 @@ def top_bar():
                 st.switch_page("Home.py")
 
 
+def update_in_collection():
+    books: list[Book] = st.session_state[books_list_key]
+    for book in books:
+        in_collection = st.session_state[f"in_collection_{book.id}"]
+        if not in_collection:
+            token = st.session_state[token_key]
+            requests.post(
+                f"https://sqr.webrtc-thesis.ru/api/books/{book.id}/collection",
+                headers={'Authorization': f'Bearer {token}'},
+                params={"add": in_collection}
+            )
+            books.remove(book)
+
+
 def my_books_page():
+    if token_key not in st.session_state:
+        update_cookies()
+        cookies = get_cookies()
+        if "SESSION_ID" in cookies:
+            session_id = cookies["SESSION_ID"]
+        else:
+            st.switch_page("Home.py")
+        if session_id:
+            st.session_state[token_key] = session_id
+        else:
+            st.switch_page("Home.py")
+
     if books_list_key not in st.session_state:
         st.session_state[books_list_key] = get_books()
 
@@ -93,7 +119,7 @@ def my_books_page():
                 st.write(book.genre)
 
             with cols[2]:
-                st.checkbox(label="In my books", value=book.in_my_collection, key=book.name + str(books.index(book)))
+                st.checkbox(label="In my books", value=True, key=f"in_collection_{book.id}", on_change=update_in_collection)
 
             st.progress(book.progress)
 
