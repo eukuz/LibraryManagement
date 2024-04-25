@@ -57,7 +57,7 @@ class BookProgress(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("user.id"), primary_key=True)
     user: Mapped[User] = relationship(init=False, lazy='selectin')
 
-    read_pages: Mapped[int]
+    read_pages: Mapped[int] = mapped_column(default=0)
 
 
 class Collection(Base):

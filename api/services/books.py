@@ -86,8 +86,13 @@ async def set_progress(
     sessionmaker: async_sessionmaker[AsyncSession],
 ):
     async with sessionmaker() as session:
-        progress = BookProgress(book_id=_id, user_id=user_id, read_pages=pages_read)
-        session.add(progress)
+        get_progress_stmt = select(BookProgress) \
+            .where(BookProgress.book_id == _id) \
+            .where(BookProgress.user_id == user_id)
+        current_progress = (await session.execute(get_progress_stmt)).scalar_one_or_none()
+        if current_progress is not None:
+            await session.delete(current_progress)
+        session.add(BookProgress(book_id=_id, user_id=user_id, read_pages=pages_read))
         try:
             await session.commit()
         except IntegrityError as e:
