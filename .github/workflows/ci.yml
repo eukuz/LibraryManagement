@@ -27,7 +27,7 @@ jobs:
 
     - name: Run Radon
       run: |
-        poetry run radon cc -a -s -na -nb -nc -e LibraryManagement/api
+        poetry run radon cc -a -s -na -nb -nc LibraryManagement/api
 
     - name: Run Mutmut
       run: |
