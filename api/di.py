@@ -11,6 +11,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 _sessionmaker: async_sessionmaker[AsyncSession] | None = None
 _yndx_cfg: YandexConfig | None = None
 

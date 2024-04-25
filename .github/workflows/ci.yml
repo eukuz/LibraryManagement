@@ -21,7 +21,7 @@ jobs:
         poetry-version: '1.7.1'
 
     - name: Install dependencies
-      working_directory: app
+      working-directory: api
       run: |
         poetry install
 
