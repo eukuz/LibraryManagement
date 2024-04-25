@@ -31,4 +31,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [mutmut]
-paths_to_mutate = ["api"]
+paths_to_mutate = ["LibraryManagement/api"]
