@@ -128,13 +128,13 @@ async def get_book(
     sessionmaker=Depends(di.sessionmaker),
     user_id=Security(di.get_user_id),
 ):
-    book, progress, in_collection = await asyncio.gather(
-        books_service.get_book(book_id, sessionmaker),
+    book = await books_service.get_book(book_id, sessionmaker)
+    if book is None:
+        return JSONResponse({}, status_code=status.HTTP_404_NOT_FOUND)
+    progress, in_collection = await asyncio.gather(
         books_service.get_progress(book_id, user_id, sessionmaker),
         collections.get_in_collection(book_id, user_id, sessionmaker),
     )
-    if book is None:
-        return JSONResponse({}, status_code=status.HTTP_404_NOT_FOUND)
     return BookResponse(
         id=book.id,
         title=book.title,
