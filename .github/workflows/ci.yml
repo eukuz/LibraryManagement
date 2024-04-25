@@ -31,7 +31,7 @@ jobs:
 
     - name: Run Mutmut
       run: |
-        poetry run mutmut run
+        poetry run mutmut run --paths-to-mutate LibraryManagement/api
 
     - name: Run Bandit
       run: |
