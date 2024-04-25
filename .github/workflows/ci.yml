@@ -1,0 +1,44 @@
+name: Book Library CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11'
+
+    - name: Run image
+      uses: abatilo/actions-poetry@v2
+      with:
+        poetry-version: '1.7.1'
+
+    - name: Install dependencies
+      run: |
+        poetry install
+
+    - name: Run Radon
+      run: |
+        poetry run radon
+
+    - name: Run Mutmut
+      run: |
+        poetry run mutmut run
+
+    - name: Run Bandit
+      run: |
+        poetry run bandit -r
+
+    - name: Run pytest with coverage
+      run: poetry run pytest --cov=api --cov-branch --cov-report term-missing
+
