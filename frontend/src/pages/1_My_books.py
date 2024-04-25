@@ -1,3 +1,5 @@
+import time
+
 import requests
 import streamlit as st
 import extra_streamlit_components as stx
@@ -16,6 +18,27 @@ def update_cookies():
 
 def get_cookies():
     return st.session_state[cookies_key]
+
+
+def set_token():
+    if token_key not in st.session_state:
+        update_cookies()
+        cookies = get_cookies()
+
+        print("TRY")
+
+        if not cookies:
+            time.sleep(0.2)
+            st.switch_page("pages/1_My_books.py")
+
+        if "SESSION_ID" in cookies:
+            session_id = cookies["SESSION_ID"]
+        else:
+            st.switch_page("Home.py")
+        if session_id:
+            st.session_state[token_key] = session_id
+        else:
+            st.switch_page("Home.py")
 
 
 def get_books():
@@ -85,18 +108,45 @@ def update_in_collection():
             books.remove(book)
 
 
+def update_pages_read():
+    books: list[Book] = st.session_state[books_list_key]
+    for book in books:
+        pages_read = int(st.session_state[f"slider_{book.id}"])
+        if pages_read != book.pages_read:
+            print(book.id)
+            print(pages_read)
+            print(book.pages_read)
+            token = st.session_state[token_key]
+            requests.post(
+                f"https://sqr.webrtc-thesis.ru/api/books/{book.id}/progress",
+                headers={'Authorization': f'Bearer {token}'},
+                json={"pages_read": pages_read},
+            )
+
+
 def my_books_page():
-    if token_key not in st.session_state:
-        update_cookies()
-        cookies = get_cookies()
-        if "SESSION_ID" in cookies:
-            session_id = cookies["SESSION_ID"]
-        else:
-            st.switch_page("Home.py")
-        if session_id:
-            st.session_state[token_key] = session_id
-        else:
-            st.switch_page("Home.py")
+    # if token_key not in st.session_state:
+    #
+    #     if cookie_retries_key not in st.session_state:
+    #         st.session_state[cookie_retries_key] = 0
+    #
+    #     update_cookies()
+    #     cookies = get_cookies()
+    #
+    #     try:
+    #         if "SESSION_ID" in cookies:
+    #             session_id = cookies["SESSION_ID"]
+    #         else:
+    #             st.switch_page("Home.py")
+    #         if session_id:
+    #             st.session_state[token_key] = session_id
+    #         else:
+    #             st.switch_page("Home.py")
+    #     except TypeError:
+    #         st.session_state[cookie_retries_key] += 1
+    #         print(cookies)
+
+    set_token()
 
     if books_list_key not in st.session_state:
         st.session_state[books_list_key] = get_books()
@@ -107,21 +157,30 @@ def my_books_page():
 
     books = st.session_state[books_list_key]
 
-    for book in books:
-        with st.container(border=True):
-            cols = st.columns(3)
+    with st.container(height=600):
+        for book in books:
+            with st.container(border=True):
+                cols = st.columns(3)
 
-            with cols[0]:
-                st.write(book.name)
-                st.write(book.author)
+                with cols[0]:
+                    st.write(book.name)
+                    st.write(book.author)
 
-            with cols[1]:
-                st.write(book.genre)
+                with cols[1]:
+                    st.write(book.genre)
 
-            with cols[2]:
-                st.checkbox(label="In my books", value=True, key=f"in_collection_{book.id}", on_change=update_in_collection)
+                with cols[2]:
+                    st.checkbox(label="In my books", value=True, key=f"in_collection_{book.id}",
+                                on_change=update_in_collection)
 
-            st.progress(book.progress)
+                st.slider(
+                    label="Reading progress",
+                    key=f"slider_{book.id}",
+                    min_value=0,
+                    max_value=book.pages_total,
+                    value=book.pages_read,
+                    on_change=update_pages_read
+                )
 
 
 my_books_page()

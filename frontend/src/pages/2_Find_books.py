@@ -114,25 +114,33 @@ def find_books_page():
 
     books = st.session_state[books_list_key]
 
-    for book in books:
-        with st.container(border=True):
-            cols = st.columns(3)
+    with st.container(height=600):
+        for book in books:
+            with st.container(border=True):
+                cols = st.columns(3)
 
-            with cols[0]:
-                st.write(book.name)
-                st.write(book.author)
+                with cols[0]:
+                    st.write(book.name)
+                    st.write(book.author)
 
-            with cols[1]:
-                st.write(book.genre)
+                with cols[1]:
+                    st.write(book.genre)
 
-            with cols[2]:
-                st.checkbox(label="In my books",
-                            value=book.in_my_collection,
-                            key=f'in_collection_{book.id}',
-                            on_change=update_in_collection
-                            )
+                with cols[2]:
+                    st.checkbox(label="In my books",
+                                value=book.in_my_collection,
+                                key=f'in_collection_{book.id}',
+                                on_change=update_in_collection
+                                )
 
-            st.progress(book.progress)
+                st.slider(
+                    label="Reading progress",
+                    key=f"slider_{book.id}",
+                    min_value=0,
+                    max_value=book.pages_total,
+                    value=book.pages_read,
+                    disabled=True
+                )
 
 
 find_books_page()
