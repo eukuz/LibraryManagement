@@ -1,4 +1,4 @@
-name: pytest CI
+name: Mutmut CI
 
 on: push
 
@@ -25,6 +25,6 @@ jobs:
       run: |
         poetry install
 
-    - name: Run pytest with coverage
-      run: poetry run pytest --cov=api --cov-branch --cov-report term-missing
-
+    - name: Run Mutmut
+      run: |
+        poetry run mutmut run --no-progress --paths-to-mutate api

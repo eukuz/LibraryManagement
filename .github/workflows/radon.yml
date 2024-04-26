@@ -1,4 +1,4 @@
-name: pytest CI
+name: Radon CI
 
 on: push
 
@@ -25,6 +25,6 @@ jobs:
       run: |
         poetry install
 
-    - name: Run pytest with coverage
-      run: poetry run pytest --cov=api --cov-branch --cov-report term-missing
-
+    - name: Run Radon
+      run: |
+        poetry run radon cc -a -s -na -nb -nc LibraryManagement/api
