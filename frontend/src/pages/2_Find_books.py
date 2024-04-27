@@ -3,6 +3,8 @@ import requests
 from model.book import parse_books_response, Book
 import extra_streamlit_components as stx
 
+from operations.token_ops import set_token
+
 books_list_key = "books_list"
 search_string_key = "search_string"
 token_key = "token"
@@ -62,15 +64,18 @@ def top_bar():
             current_search_string = st.text_input(
                 label="Search string",
                 placeholder="Type a book's title...",
+                key="current_search_string",
                 label_visibility="collapsed"
             )
+
             if current_search_string is None:
                 current_search_string = ""
 
             if current_search_string != st.session_state[search_string_key]:
-                print(current_search_string)
-                print(st.session_state[search_string_key])
+                st.session_state[search_string_key] = current_search_string
                 st.session_state[books_list_key] = find_books(current_search_string)
+                if not st.session_state[books_list_key]:
+                    st.write("No book with this name in catalogue.")
 
         with cols[2]:
             suggest_button = st.button("Suggest")
@@ -92,28 +97,7 @@ def update_in_collection():
             )
 
 
-def find_books_page():
-    if token_key not in st.session_state:
-        update_cookies()
-        cookies = get_cookies()
-        if "SESSION_ID" in cookies:
-            session_id = cookies["SESSION_ID"]
-        else:
-            st.switch_page("Home.py")
-        if session_id:
-            st.session_state[token_key] = session_id
-        else:
-            st.switch_page("Home.py")
-
-    if books_list_key not in st.session_state:
-        st.session_state[books_list_key] = find_books("")
-
-    st.title("Find books")
-
-    top_bar()
-
-    books = st.session_state[books_list_key]
-
+def display_books(books: list[Book]) -> ():
     with st.container(height=600):
         for book in books:
             with st.container(border=True):
@@ -141,6 +125,22 @@ def find_books_page():
                     value=book.pages_read,
                     disabled=True
                 )
+
+
+def find_books_page():
+    set_token()
+
+    if books_list_key not in st.session_state:
+        st.session_state[books_list_key] = find_books("")
+
+    st.title("Find books")
+
+    top_bar()
+
+    books = st.session_state[books_list_key]
+
+    if st.session_state[books_list_key]:
+        display_books(books)
 
 
 find_books_page()
