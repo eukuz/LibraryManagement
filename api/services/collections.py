@@ -1,9 +1,11 @@
 import logging
+from operator import and_
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.exc import IntegrityError
 from api.exceptions import NotFoundError
-from api.persistence.models import Book, Collection
+from api.models.api import CollectionItem
+from api.persistence.models import Book, BookProgress, Collection, User
 
 logger = logging.getLogger(__name__)
 
@@ -53,26 +55,29 @@ async def set_in_collection(
         await remove_from_collection(_id, user_id, sessionmaker)
 
 
-async def get_in_collection(
-    _id: int,
-    user_id: str,
-    sessionmaker: async_sessionmaker[AsyncSession],
-) -> bool:
-    async with sessionmaker() as session:
-        stmt = select(Collection) \
-            .where(Collection.book_id == _id) \
-            .where(Collection.user_id == user_id)
-        result = await session.execute(stmt)
-        result = result.scalar_one_or_none()
-        return result is not None
-
-
 async def get_collection(
     user_id: str,
     sessionmaker: async_sessionmaker[AsyncSession],
-) -> list[Book]:
+) -> list[CollectionItem]:
     async with sessionmaker() as session:
-        stmt = select(Collection) \
-            .where(Collection.user_id == user_id)
-        result = (await session.execute(stmt)).scalars()
-        return [item.book for item in result]
+        stmt = select(Book, BookProgress.read_pages, Collection.created_at) \
+            .join(BookProgress, isouter=True) \
+            .join(
+                Collection,
+                onclause=and_(
+                    Collection.book_id == Book.id,
+                    Collection.user_id == select(User.id).where(User.id == user_id).scalar_subquery(),
+                ),
+            )
+        books = list(await session.execute(stmt))
+        result: list[CollectionItem] = []
+        for (book, read_pages, created_at) in books:
+            result.append(CollectionItem(
+                id=book.id,
+                title=book.title,
+                author=book.author_id,
+                genre=book.genre_name,
+                read_pages=read_pages or 0,
+                total_pages=book.pages,
+            ))
+        return result

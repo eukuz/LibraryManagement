@@ -25,6 +25,7 @@ flake8 = "^7.0.0"
 streamlit = "^1.33.0"
 extra-streamlit-components = "^0.1.71"
 pyright = "^1.1.360"
+locust = "^2.26.0"
 
 
 [build-system]
@@ -37,3 +38,8 @@ paths_to_mutate = ["LibraryManagement/api"]
 [tool.coverage.run]
 branch = true
 omit = ["main.py"]
+
+[tool.locust]
+locustfile = "locust/locustfile.py"
+host = "https://sqr.webrtc-thesis.ru"
+users = 10

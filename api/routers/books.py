@@ -1,28 +1,14 @@
 from fastapi import APIRouter, Depends, Security, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, NonNegativeInt
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from api import di
 from api.exceptions import NotFoundError
-from api.persistence.models import Book, Collection
 from api.services import books as books_service, collections
-import asyncio
+from api.models.api import BookResponse
 
 
 router = APIRouter()
-
-
-class BookResponse(BaseModel):
-    id: int
-    title: str
-    author: str
-    genre: str
-
-    read_pages: int
-    total_pages: int
-
-    in_collection: bool
 
 
 class SearchBookResponse(BaseModel):
@@ -38,44 +24,14 @@ async def search_books(
     sessionmaker=Depends(di.sessionmaker),
     user_id=Depends(di.get_user_id),
 ) -> SearchBookResponse:
-    books_ = await books_service.search_books(
+    return SearchBookResponse(books=await books_service.search_books(
+        user_id,
         title_like,
         author_like,
         offset,
         limit,
         sessionmaker,
-    )
-    resp = SearchBookResponse(books=[])
-    books = {
-        book.id: BookResponse(
-            id=book.id,
-            title=book.title,
-            author=book.author_id,
-            genre=book.genre_name,
-            read_pages=0,
-            total_pages=book.pages,
-            in_collection=False,
-        )
-        for book in books_
-    }
-    coros = {
-        book.id: (
-            asyncio.create_task(
-                books_service.get_progress(book.id, user_id, sessionmaker)
-            ),
-            asyncio.create_task(
-                collections.get_in_collection(book.id, user_id, sessionmaker)
-            ),
-        )
-        for book in books_
-    }
-    for book_id, (progress_coro, in_coll_coro) in coros.items():
-        progress = await progress_coro
-        in_coll = await in_coll_coro
-        books[book_id].read_pages = progress.read_pages
-        books[book_id].in_collection = in_coll
-    resp.books = list(books.values())
-    return resp
+    ))
 
 
 @router.get("/suggest")
@@ -120,22 +76,10 @@ async def get_book(
     sessionmaker=Depends(di.sessionmaker),
     user_id=Security(di.get_user_id),
 ):
-    book = await books_service.get_book(book_id, sessionmaker)
+    book = await books_service.get_book(book_id, user_id, sessionmaker)
     if book is None:
         return JSONResponse({}, status_code=status.HTTP_404_NOT_FOUND)
-    progress, in_collection = await asyncio.gather(
-        books_service.get_progress(book_id, user_id, sessionmaker),
-        collections.get_in_collection(book_id, user_id, sessionmaker),
-    )
-    return BookResponse(
-        id=book.id,
-        title=book.title,
-        author=book.author.fullname,
-        genre=book.genre_name,
-        read_pages=progress.read_pages,
-        total_pages=book.pages,
-        in_collection=in_collection,
-    )
+    return book
 
 
 @router.post("/{book_id}/collection")
