@@ -41,6 +41,7 @@ def create_app(db_path: str) -> FastAPI:
 
     @app.exception_handler(ValueError)
     async def _(request, exc):
+        logging.exception(exc)
         return JSONResponse(
             status_code=500,
             content={"message": "Server Error"}

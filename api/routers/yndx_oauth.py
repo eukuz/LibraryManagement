@@ -6,7 +6,6 @@ import httpx
 from pydantic import BaseModel
 from api.config import YandexConfig
 from api import di
-from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 import logging
 
@@ -50,13 +49,13 @@ async def __get_access_token(
     logger.info(resp.content)
     resp.raise_for_status()
 
-    access_token = resp.json().get('access_token')
+    access_token: str | None = resp.json().get('access_token')
     if access_token is None:
         raise Exception("Expect 'access_token' field from Yandex OAuth")
     return access_token
 
 
-class __UserData(BaseModel):
+class _UserData(BaseModel):
     display_name: str
     id: str
 
@@ -64,7 +63,7 @@ class __UserData(BaseModel):
 async def __get_user_data(
     access_token: str,
     http_client: httpx.AsyncClient,
-) -> __UserData:
+) -> _UserData:
     token = f"OAuth {access_token}"
     http_client.headers = {"Authorization": token}
     resp = await http_client.get(
@@ -77,7 +76,7 @@ async def __get_user_data(
     logger.info(resp.request.headers["Authorization"])
     logger.info(resp.content)
     resp.raise_for_status()
-    return __UserData.model_validate(resp.json())
+    return _UserData.model_validate(resp.json())
 
 
 @router.get("/redirect")
