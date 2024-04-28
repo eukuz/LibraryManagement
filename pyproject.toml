@@ -32,7 +32,7 @@ locust = "^2.26.0"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[mutmut]
+[tool.mutmut]
 paths_to_mutate = ["LibraryManagement/api"]
 
 [tool.coverage.run]
@@ -42,4 +42,5 @@ omit = ["main.py"]
 [tool.locust]
 locustfile = "locust/locustfile.py"
 host = "https://sqr.webrtc-thesis.ru"
-users = 10
+users = 20
+autostart = true

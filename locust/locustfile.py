@@ -7,8 +7,8 @@ class QuickstartUser(HttpUser):
 
     @task
     def list_books(self):
-        for offset in range(0, 10000, 50):
-            self.client.get("/api/books/", params={'limit': 50, 'offset': offset})
+        for offset in range(0, 13000, 50):
+            self.client.get("/api/books/", params={'limit': 20, 'offset': offset})
 
     def on_start(self):
         session_id = os.environ['SESSION_ID']
