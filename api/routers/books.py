@@ -85,18 +85,9 @@ async def suggest_books(
     user_id=Depends(di.get_user_id),
 ) -> SearchBookResponse:
     resp = SearchBookResponse(books=[])
-    async with sessionmaker() as session:
-        user_collection_stmt = select(Collection.book_id).where(
-            Collection.user_id == user_id
-        )
-        stmt = (
-            select(Book)
-            .where(Book.id.not_in(user_collection_stmt))
-            .order_by(func.random())
-            .limit(10)
-        )
-        stmt = stmt.limit(limit)
-        books_ = (await session.execute(stmt)).scalars()
+
+    books = await books_service.suggest_books(user_id, limit, sessionmaker)
+
     resp.books = [
         BookResponse(
             id=book.id,
@@ -107,8 +98,9 @@ async def suggest_books(
             total_pages=book.pages,
             in_collection=False,
         )
-        for book in books_
+        for book in books
     ]
+
     return resp
 
 

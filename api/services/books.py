@@ -1,8 +1,10 @@
 import logging
-from sqlalchemy import select
+import random
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.exc import IntegrityError
-from api.persistence.models import Book, BookProgress
+from api.persistence.models import Book, BookProgress, Collection
+from api.services import collections
 from api.exceptions import NotFoundError
 
 
@@ -99,3 +101,48 @@ async def set_progress(
             if "FOREIGN KEY constraint failed" in str(e):
                 raise NotFoundError from e
             raise
+
+
+async def suggest_books(
+    user_id: str,
+    count: int,
+    sessionmaker: async_sessionmaker[AsyncSession],
+) -> list[Book]:
+    user_collection_stmt = select(Collection.book_id) \
+        .where(Collection.user_id == user_id)
+    user_collection = await collections.get_collection(user_id, sessionmaker)
+
+    genre_count = {book.genre.name: 0 for book in user_collection}
+    for book in user_collection:
+        genre_count[book.genre.name] += 1
+
+    top_genres = sorted(
+        genre_count.items(),
+        key=lambda x: x[1],
+        reverse=True
+    )
+    top_genres = top_genres[:3]
+    top_genres = [genre[0] for genre in top_genres]
+
+    result: list[Book] = []
+
+    same_genre_count = int(count * 0.75)
+    async with sessionmaker() as session:
+        stmt = select(Book) \
+            .where(Book.id.not_in(user_collection_stmt)) \
+            .where(Book.genre_name.in_(top_genres)) \
+            .order_by(func.random()) \
+            .limit(same_genre_count)
+        result.extend((await session.execute(stmt)).scalars())
+
+    max_size = count - len(result)
+    async with sessionmaker() as session:
+        stmt = select(Book) \
+            .where(Book.id.not_in(user_collection_stmt)) \
+            .where(Book.genre_name.not_in(genre_count.keys())) \
+            .order_by(func.random()) \
+            .limit(max_size)
+        result.extend((await session.execute(stmt)).scalars())
+
+    random.shuffle(result)
+    return result
