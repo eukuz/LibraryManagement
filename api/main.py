@@ -40,4 +40,4 @@ def create_app(db_path: str) -> FastAPI:
 if __name__ == "__main__":
     db_path = os.environ.get("DB_DSN", "api/store/db.sqlite")
     app = create_app(db_path)
-    uvicorn.run(app, host="0.0.0.0", port=9000)
+    uvicorn.run(app, host="127.0.0.1", port=9000)

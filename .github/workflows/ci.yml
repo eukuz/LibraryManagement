@@ -26,5 +26,5 @@ jobs:
         poetry install
 
     - name: Run pytest with coverage
-      run: poetry run pytest --cov=api --cov-branch --cov-report term-missing
+      run: poetry run pytest --cov=api --cov-branch --cov-report term-missing --cov-fail-under=60
 
