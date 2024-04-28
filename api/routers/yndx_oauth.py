@@ -1,5 +1,5 @@
 import base64
-from typing import cast
+from typing import Literal, cast
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 import httpx
@@ -33,6 +33,15 @@ async def authenticate_user(oauth_cfg: YandexConfig = Depends(di.yndx_oauth_cfg)
     return RedirectResponse(url=url)
 
 
+class GetTokenRequest(BaseModel):
+    grant_type: Literal["authorization_code"] = "authorization_code"
+    code: str
+
+
+class AccessTokenResponse(BaseModel):
+    access_token: str
+
+
 async def __get_access_token(
     code: str,
     oauth_cfg: YandexConfig,
@@ -44,19 +53,14 @@ async def __get_access_token(
     http_client.headers = {"Authorization": token}
     resp = await http_client.post(
         "https://oauth.yandex.ru/token",
-        data={
-            "grant_type": "authorization_code",
-            "code": code,
-        },
+        data=GetTokenRequest(code=code).model_dump()
     )
     logger.info(resp.request.headers["Authorization"])
     logger.info(resp.content)
     resp.raise_for_status()
 
-    access_token: str | None = resp.json().get('access_token')
-    if access_token is None:
-        raise Exception("Expect 'access_token' field from Yandex OAuth")
-    return access_token
+    access_token_resp = AccessTokenResponse.model_validate(resp.json())
+    return access_token_resp.access_token
 
 
 class _UserData(BaseModel):
