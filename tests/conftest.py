@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 import pytest
 import pytest_asyncio
+from api.config import YandexConfig
 from api.main import create_app
 from api.persistence.models import Base, Genre, Author
 from api.services import books, users
@@ -41,7 +42,12 @@ def set_envs():
 
 
 @pytest.fixture
-def app(set_envs, db_path) -> FastAPI:
+def yndx_config(set_envs):
+    return YandexConfig()  # type: ignore
+
+
+@pytest.fixture
+def app(yndx_config, db_path) -> FastAPI:
     return create_app(db_path)
 
 

@@ -59,8 +59,4 @@ if __name__ == "__main__":
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", '9000'))
     app = create_app(db_path)
-<<<<<<< HEAD
-    uvicorn.run(app, host="127.0.0.1", port=9000)
-=======
     uvicorn.run(app, host=host, port=port)
->>>>>>> 87ceaf305346a676b05233a6317aaaaa6d4279dd
