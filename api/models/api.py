@@ -21,3 +21,11 @@ class CollectionItem(BaseModel):
 
     read_pages: int
     total_pages: int
+
+
+class _Message(BaseModel):
+    pass
+
+
+UNAUTHORIZED_ANSWER = {401: {"model": _Message}}
+NOT_FOUND_ANSWER = {404: {"model": _Message}}

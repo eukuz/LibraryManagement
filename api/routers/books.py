@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from api import di
 from api.exceptions import NotFoundError
 from api.services import books as books_service, collections
-from api.models.api import BookResponse
+from api.models.api import BookResponse, UNAUTHORIZED_ANSWER, NOT_FOUND_ANSWER
 
 
 router = APIRouter()
@@ -15,7 +15,9 @@ class SearchBookResponse(BaseModel):
     books: list[BookResponse]
 
 
-@router.get("/")
+@router.get("/", responses={
+    **UNAUTHORIZED_ANSWER,
+})
 async def search_books(
     title_like: str = "",
     author_like: str = "",
@@ -34,7 +36,9 @@ async def search_books(
     ))
 
 
-@router.get("/suggest")
+@router.get("/suggest", responses={
+    **UNAUTHORIZED_ANSWER,
+})
 async def suggest_books(
     limit: int = 20,
     sessionmaker: async_sessionmaker[AsyncSession] = Depends(di.sessionmaker),
@@ -66,9 +70,8 @@ async def suggest_books(
         200: {
             "model": BookResponse,
         },
-        404: {
-            "description": "No such a book",
-        },
+        **UNAUTHORIZED_ANSWER,
+        **NOT_FOUND_ANSWER,
     },
 )
 async def get_book(
@@ -82,7 +85,10 @@ async def get_book(
     return book
 
 
-@router.post("/{book_id}/collection")
+@router.post("/{book_id}/collection", responses={
+    **UNAUTHORIZED_ANSWER,
+    **NOT_FOUND_ANSWER,
+})
 async def set_in_collection(
     book_id: int,
     add: bool,
@@ -99,7 +105,10 @@ class SetProgressRequest(BaseModel):
     pages_read: NonNegativeInt
 
 
-@router.post("/{book_id}/progress")
+@router.post("/{book_id}/progress", responses={
+    **UNAUTHORIZED_ANSWER,
+    **NOT_FOUND_ANSWER,
+})
 async def set_progress(
     __root__: SetProgressRequest,
     book_id: int,
@@ -112,4 +121,4 @@ async def set_progress(
             book_id, user_id, req_body.pages_read, sessionmaker
         )
     except NotFoundError:
-        return JSONResponse({}, status_code=status.HTTP_404_NOT_FOUND)
+        return JSONResponse({"description": "No such a book"}, status_code=status.HTTP_404_NOT_FOUND)

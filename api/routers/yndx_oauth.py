@@ -21,7 +21,11 @@ class OAuthModel(BaseModel):
     id: str
 
 
-@router.get("/authenticate")
+@router.get("/authenticate", responses={
+    307: {
+        "description": "Redirect to the OAuth page",
+    }
+}, status_code=307)
 async def authenticate_user(oauth_cfg: YandexConfig = Depends(di.yndx_oauth_cfg)):
     url = "https://oauth.yandex.ru/authorize?" \
         f"response_type=code" \
@@ -79,7 +83,11 @@ async def __get_user_data(
     return _UserData.model_validate(resp.json())
 
 
-@router.get("/redirect")
+@router.get("/redirect", status_code=307, responses={
+    307: {
+        "description": "Redirect to the UI page",
+    }
+})
 async def yndx_redirect_after_auth(
     code: str | None = None,
     error: str | None = None,
