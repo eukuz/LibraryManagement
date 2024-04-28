@@ -6,3 +6,5 @@ api/store
 books.csv
 .pytest_cache
 .coverage
+.mutmut-cache
+html

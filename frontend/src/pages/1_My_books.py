@@ -1,44 +1,13 @@
-import time
-
 import requests
 import streamlit as st
-import extra_streamlit_components as stx
 
 from model.book import parse_books_response, Book
+from operations.token_ops import set_token
 
 books_list_key = "books_list"
 search_string_key = "search_string"
 token_key = "token"
 cookies_key = "cookies"
-
-
-def update_cookies():
-    stx.CookieManager(cookies_key)
-
-
-def get_cookies():
-    return st.session_state[cookies_key]
-
-
-def set_token():
-    if token_key not in st.session_state:
-        update_cookies()
-        cookies = get_cookies()
-
-        print("TRY")
-
-        if not cookies:
-            time.sleep(0.2)
-            st.switch_page("pages/1_My_books.py")
-
-        if "SESSION_ID" in cookies:
-            session_id = cookies["SESSION_ID"]
-        else:
-            st.switch_page("Home.py")
-        if session_id:
-            st.session_state[token_key] = session_id
-        else:
-            st.switch_page("Home.py")
 
 
 def get_books():
@@ -124,39 +93,7 @@ def update_pages_read():
             )
 
 
-def my_books_page():
-    # if token_key not in st.session_state:
-    #
-    #     if cookie_retries_key not in st.session_state:
-    #         st.session_state[cookie_retries_key] = 0
-    #
-    #     update_cookies()
-    #     cookies = get_cookies()
-    #
-    #     try:
-    #         if "SESSION_ID" in cookies:
-    #             session_id = cookies["SESSION_ID"]
-    #         else:
-    #             st.switch_page("Home.py")
-    #         if session_id:
-    #             st.session_state[token_key] = session_id
-    #         else:
-    #             st.switch_page("Home.py")
-    #     except TypeError:
-    #         st.session_state[cookie_retries_key] += 1
-    #         print(cookies)
-
-    set_token()
-
-    if books_list_key not in st.session_state:
-        st.session_state[books_list_key] = get_books()
-
-    st.title("My books")
-
-    top_bar()
-
-    books = st.session_state[books_list_key]
-
+def display_books(books: list[Book]) -> ():
     with st.container(height=600):
         for book in books:
             with st.container(border=True):
@@ -181,6 +118,21 @@ def my_books_page():
                     value=book.pages_read,
                     on_change=update_pages_read
                 )
+
+
+def my_books_page():
+    set_token()
+
+    if books_list_key not in st.session_state:
+        st.session_state[books_list_key] = get_books()
+
+    st.title("My books")
+
+    top_bar()
+
+    books = st.session_state[books_list_key]
+
+    display_books(books)
 
 
 my_books_page()
