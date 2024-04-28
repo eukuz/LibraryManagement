@@ -1,9 +1,10 @@
 import logging
 import random
-from sqlalchemy import select, func
+from sqlalchemy import and_, select, func
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from sqlalchemy.exc import IntegrityError
-from api.persistence.models import Book, BookProgress, Collection
+from api.models.api import BookResponse
+from api.persistence.models import Book, BookProgress, Collection, User
 from api.services import collections
 from api.exceptions import NotFoundError
 
@@ -12,29 +13,74 @@ logger = logging.getLogger(__name__)
 
 
 async def search_books(
+    user_id: str,
     title_like: str,
     author_like: str,
     offset: int,
     limit: int,
     sessionmaker: async_sessionmaker[AsyncSession],
-) -> list[Book]:
+) -> list[BookResponse]:
     async with sessionmaker() as session:
-        stmt = select(Book)
+        stmt = select(Book, BookProgress.read_pages, Collection.created_at) \
+            .join(BookProgress, isouter=True) \
+            .join(
+                Collection,
+                onclause=and_(
+                    Collection.book_id == Book.id,
+                    Collection.user_id == select(User.id).where(User.id == user_id).scalar_subquery(),
+                ),
+                isouter=True,
+            )
         if title_like != "":
             stmt = stmt.where(Book.title.contains(title_like))
         if author_like != "":
             stmt = stmt.where(Book.author_id.contains(author_like))
         stmt = stmt.offset(offset).limit(limit)
-        return list((await session.execute(stmt)).scalars())
+        books = list(await session.execute(stmt))
+        result: list[BookResponse] = []
+        for (book, read_pages, created_at) in books:
+            result.append(BookResponse(
+                id=book.id,
+                title=book.title,
+                author=book.author_id,
+                genre=book.genre_name,
+                read_pages=read_pages or 0,
+                total_pages=book.pages,
+                in_collection=created_at is not None,
+            ))
+        return result
 
 
 async def get_book(
     _id: int,
+    user_id: str,
     sessionmaker: async_sessionmaker[AsyncSession],
-) -> Book | None:
+) -> BookResponse | None:
     async with sessionmaker() as session:
-        stmt = select(Book).where(Book.id == _id)
-        return (await session.execute(stmt)).scalar_one_or_none()
+        stmt = select(Book, BookProgress.read_pages, Collection.created_at) \
+            .where(Book.id == _id) \
+            .join(BookProgress, isouter=True) \
+            .join(
+                Collection,
+                onclause=and_(
+                    Collection.book_id == Book.id,
+                    Collection.user_id == select(User.id).where(User.id == user_id).scalar_subquery(),
+                ),
+                isouter=True,
+            )
+        book = list(await session.execute(stmt))
+        if len(book) == 0:
+            return None
+        book, read_pages, created_at = book[0]
+        return BookResponse(
+            id=book.id,
+            title=book.title,
+            author=book.author_id,
+            genre=book.genre_name,
+            read_pages=read_pages or 0,
+            total_pages=book.pages,
+            in_collection=created_at is not None,
+        )
 
 
 async def add_book(
@@ -74,10 +120,9 @@ async def get_progress(
         result = result.scalar_one_or_none()
     if result is None:
         result = BookProgress(book_id=_id, user_id=user_id, read_pages=0)
-        book = await get_book(_id, sessionmaker)
+        book = await get_book(_id, user_id, sessionmaker)
         if book is None:
             raise NotFoundError
-        result.book = book
     return result
 
 
@@ -112,9 +157,9 @@ async def suggest_books(
         .where(Collection.user_id == user_id)
     user_collection = await collections.get_collection(user_id, sessionmaker)
 
-    genre_count = {book.genre.name: 0 for book in user_collection}
+    genre_count = {book.genre: 0 for book in user_collection}
     for book in user_collection:
-        genre_count[book.genre.name] += 1
+        genre_count[book.genre] += 1
 
     top_genres = sorted(
         genre_count.items(),

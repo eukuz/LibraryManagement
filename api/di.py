@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, Request
-from fastapi.responses import RedirectResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+import httpx
 from api.config import YandexConfig
 from api.persistence.models import Base
 from api.services import users
@@ -57,6 +57,11 @@ async def init_db(db_path: str) -> async_sessionmaker[AsyncSession]:
     return _sessionmaker
 
 
+async def http_client():
+    async with httpx.AsyncClient() as client:
+        yield client
+
+
 async def __cookie_checker(request: Request):
     if (session_id := request.cookies.get("SESSION_ID")) is not None:
         return HTTPAuthorizationCredentials(scheme="Bearer", credentials=session_id)
@@ -71,11 +76,6 @@ async def __get_user_data(
         creds = cookie_creds
     if creds is None:
         raise HTTPException(status_code=401)
-        # raise HTTPException(
-        #     status_code=302,
-        #     detail="Not authenticated",
-        #     headers={"Location": "/api/yndx-oauth/authenticate"},
-        # )
     userdata = await users.get_user_data(creds.credentials, sessionmaker)
     if userdata is None:
         logger.warning("Cannot find user for session '%s'", creds.credentials)

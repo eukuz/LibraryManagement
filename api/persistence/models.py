@@ -1,4 +1,5 @@
-from sqlalchemy import ForeignKey
+from datetime import datetime
+from sqlalchemy import ForeignKey, func
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, MappedAsDataclass
 
@@ -40,10 +41,7 @@ class Book(Base):
     title: Mapped[str] = mapped_column(unique=True)
 
     author_id: Mapped[str] = mapped_column(ForeignKey('author.fullname'))
-    author: Mapped[Author] = relationship(init=False, lazy='selectin')
-
     genre_name: Mapped[str] = mapped_column(ForeignKey("genre.name"))
-    genre: Mapped[Genre] = relationship(init=False, lazy='selectin')
 
     pages: Mapped[int]
 
@@ -52,10 +50,7 @@ class BookProgress(Base):
     __tablename__ = "book_progress"
 
     book_id: Mapped[int] = mapped_column(ForeignKey("book.id"), primary_key=True)
-    book: Mapped[Book] = relationship(init=False, lazy='selectin')
-
     user_id: Mapped[str] = mapped_column(ForeignKey("user.id"), primary_key=True)
-    user: Mapped[User] = relationship(init=False, lazy='selectin')
 
     read_pages: Mapped[int] = mapped_column(default=0)
 
@@ -65,4 +60,4 @@ class Collection(Base):
 
     user_id: Mapped[str] = mapped_column(ForeignKey("user.id"), primary_key=True)
     book_id: Mapped[int] = mapped_column(ForeignKey("book.id"), primary_key=True)
-    book: Mapped[Book] = relationship(init=False, lazy='selectin')
+    created_at: Mapped[datetime] = mapped_column(init=False, server_default=func.now())
