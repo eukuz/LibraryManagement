@@ -33,7 +33,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.mutmut]
-paths_to_mutate = ["LibraryManagement/api"]
+paths_to_mutate = ["api"]
 
 [tool.coverage.run]
 branch = true

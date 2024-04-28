@@ -1,5 +1,5 @@
 import base64
-from typing import cast
+from typing import Literal, cast
 from fastapi import APIRouter, Depends
 from fastapi.responses import RedirectResponse
 import httpx
@@ -34,12 +34,13 @@ async def authenticate_user(oauth_cfg: YandexConfig = Depends(di.yndx_oauth_cfg)
 
 
 class GetTokenRequest(BaseModel):
-    grant_type = "authorization_code"
+    grant_type: Literal["authorization_code"] = "authorization_code"
     code: str
 
 
 class AccessTokenResponse(BaseModel):
     access_token: str
+
 
 async def __get_access_token(
     code: str,
@@ -58,8 +59,8 @@ async def __get_access_token(
     logger.info(resp.content)
     resp.raise_for_status()
 
-    access_token_resp = AccessTokenResponse.parse_obj_model(resp.json())
-    return access_token_resp
+    access_token_resp = AccessTokenResponse.model_validate(resp.json())
+    return access_token_resp.access_token
 
 
 class _UserData(BaseModel):

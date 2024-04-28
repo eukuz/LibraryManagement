@@ -14,10 +14,10 @@ def test_existent_book(client):
 
 
 def test_appears_in_collection_unexistent_book(client):
-    resp = client.post("/api/books/-1/collection?add=true")
+    resp = client.post("/api/books/0/collection?add=true")
     assert resp.status_code == 404
 
-    resp = client.post("/api/books/-1/collection?add=false")
+    resp = client.post("/api/books/0/collection?add=false")
     assert resp.status_code == 404
 
 
@@ -27,6 +27,13 @@ def test_appears_in_collection(client):
     resp = resp.json()
     assert resp["in_collection"] is False, resp
 
+    resp = client.get("/api/collection")
+    assert resp.status_code == 200
+    assert resp.json()["books"] == []
+
+    resp = client.post("/api/books/1/collection?add=false")
+    assert resp.status_code == 404
+
     resp = client.post("/api/books/1/collection?add=true")
     assert resp.status_code == 200
 
@@ -34,6 +41,11 @@ def test_appears_in_collection(client):
     assert resp.status_code == 200
     resp = resp.json()
     assert resp["in_collection"] is True, resp
+
+    resp = client.get("/api/collection")
+    assert resp.status_code == 200
+    resp = resp.json()
+    assert set([book["id"] for book in resp["books"]]) == set([1])
 
     resp = client.post("/api/books/1/collection?add=false")
     assert resp.status_code == 200

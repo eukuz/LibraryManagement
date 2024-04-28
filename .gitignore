@@ -8,3 +8,4 @@ books.csv
 .coverage
 .mutmut-cache
 html
+.DS_Store
