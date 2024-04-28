@@ -1,3 +1,4 @@
+import os
 from typing import Any, AsyncGenerator
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -25,8 +26,22 @@ def user_id() -> str:
     return "1"
 
 
+@pytest.fixture(scope='session')
+def set_envs():
+    try:
+        os.environ['YNDX_CLIENT_ID'] = '1'
+        os.environ['YNDX_CLIENT_SECRET'] = '1'
+        yield
+    finally:
+        try:
+            del os.environ['YNDX_CLIENT_ID']
+            del os.environ['YNDX_CLIENT_SECRET']
+        except KeyError:
+            pass
+
+
 @pytest.fixture
-def app(db_path) -> FastAPI:
+def app(set_envs, db_path) -> FastAPI:
     return create_app(db_path)
 
 
