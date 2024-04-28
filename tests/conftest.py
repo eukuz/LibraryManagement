@@ -6,7 +6,7 @@ import pytest
 import pytest_asyncio
 from api.main import create_app
 from api.persistence.models import Base, Genre, Author
-from api.services import users
+from api.services import books, users
 from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
 from api import di
 
@@ -62,7 +62,11 @@ async def set_session_id(
         await users.store_user_data(user_id, "aboba", sessionmaker)
         session.add(Genre(name="genre1"))
         session.add(Author(fullname="author1"))
+        session.add(Genre(name="genre2"))
+        session.add(Author(fullname="author2"))
         await session.commit()
+        await books.add_book("1", "author1", "genre1", 100, sessionmaker)
+        await books.add_book("2", "author2", "genre2", 200, sessionmaker)
     session_id = await users.create_new_session_for(user_id, sessionmaker)
 
     yield session_id
