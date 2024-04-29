@@ -20,11 +20,6 @@ class QuickstartUser(HttpUser):
         self.client.get(f"/api/books/{book_id}")
 
     @task
-    def get_book_collection(self):
-        book_id = 123  # Replace with a valid book ID
-        self.client.get(f"/api/books/{book_id}/collection")
-
-    @task
     def suggest_books(self):
         self.client.get("/api/books/suggest")
 
