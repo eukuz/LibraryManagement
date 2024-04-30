@@ -37,9 +37,13 @@ async def search_books(
             stmt = stmt.where(Book.author_id.contains(author_like))
         stmt = stmt.offset(offset).limit(limit)
         books = list(await session.execute(stmt))
-        result: list[BookResponse] = []
+        result: dict[str, BookResponse] = {}
         for (book, read_pages, created_at) in books:
-            result.append(BookResponse(
+            if book.id in result:
+                if read_pages:
+                    result[book.id].read_pages = read_pages
+                continue
+            result[book.id] = BookResponse(
                 id=book.id,
                 title=book.title,
                 author=book.author_id,
@@ -47,8 +51,8 @@ async def search_books(
                 read_pages=read_pages or 0,
                 total_pages=book.pages,
                 in_collection=created_at is not None,
-            ))
-        return result
+            )
+        return list(result.values())
 
 
 async def get_book(

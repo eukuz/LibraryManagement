@@ -70,14 +70,18 @@ async def get_collection(
                 ),
             )
         books = list(await session.execute(stmt))
-        result: list[CollectionItem] = []
+        result: dict[str, CollectionItem] = {}
         for (book, read_pages, created_at) in books:
-            result.append(CollectionItem(
+            if book.id in result:
+                if read_pages:
+                    result[book.id].read_pages = read_pages
+                continue
+            result[book.id] = CollectionItem(
                 id=book.id,
                 title=book.title,
                 author=book.author_id,
                 genre=book.genre_name,
                 read_pages=read_pages or 0,
                 total_pages=book.pages,
-            ))
-        return result
+            )
+        return list(result.values())

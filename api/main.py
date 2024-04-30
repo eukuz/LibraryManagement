@@ -32,13 +32,6 @@ def create_app(db_path: str) -> FastAPI:
         allow_headers=["*"],
     )
 
-    @app.exception_handler(HTTPException)
-    async def _(request, exc):
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={"message": "Server Error"}
-        )
-
     @app.exception_handler(ValueError)
     async def _(request, exc):
         logging.exception(exc)
