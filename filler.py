@@ -6,7 +6,7 @@ from pydantic import BaseModel
 import asyncio
 import csv
 
-from api.persistence.models import Genre, Author
+from api.persistence.models import Book, Genre, Author
 from api.services import books
 
 
@@ -19,37 +19,45 @@ class Row(BaseModel):
 
 async def fill_genres(sessionmaker: async_sessionmaker[AsyncSession], rows: list[Row]):
     print("fill genres")
-    for row in rows:
-        async with sessionmaker() as session:
-            session.add(Genre(name=row.genre_name))
-            try:
-                await session.commit()
-            except IntegrityError as e:
-                print(e)
-                pass
+    async with sessionmaker() as session:
+        genres = set()
+        for row in rows:
+            genres.add(row.genre_name)
+        for genre in genres:
+            session.add(Genre(name=genre))
+        try:
+            await session.commit()
+        except IntegrityError as e:
+            print(e)
+            pass
 
 
 async def fill_authors(sessionmaker: async_sessionmaker[AsyncSession], rows: list[Row]):
-    for row in rows:
-        async with sessionmaker() as session:
-            session.add(Author(fullname=row.author))
-            try:
-                await session.commit()
-            except IntegrityError as e:
-                print(e)
-                pass
+    async with sessionmaker() as session:
+        authors = set()
+        for row in rows:
+            authors.add(row.author)
+        for author in authors:
+            session.add(Author(fullname=author))
+        try:
+            await session.commit()
+        except IntegrityError as e:
+            print(e)
+            pass
 
 
 async def fill_books(sessionmaker: async_sessionmaker[AsyncSession], rows: list[Row]):
-    for row in rows:
-        try:
-            await books.add_book(
-                row.title,
-                row.author,
-                row.genre_name,
-                row.pages,
-                sessionmaker,
+    async with sessionmaker() as session:
+        for row in rows:
+            b = Book(
+                title=row.title,
+                author_id=row.author,
+                genre_name=row.genre_name,
+                pages=row.pages,
             )
+            session.add(b)
+        try:
+            await session.commit()
         except IntegrityError as e:
             print(e)
             pass
